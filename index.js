@@ -3,6 +3,7 @@ const Promise = require('bluebird');
 
 const Slack = require('./src/Slack');
 const Webhook = require('./src/Webhook');
+const gitInfo = require('./gitsimple')
 
 class ServerlessPluginNotification {
 
@@ -22,12 +23,22 @@ class ServerlessPluginNotification {
       // before service deployment
       'before:deploy:deploy': () => Promise.bind(this)
         .then(() => Object.assign(this, this.getDeploymentInfo()))
+        .then(async () => {
+          const gitter = await gitInfo(__dirname)
+          console.log(gitter);
+          await Object.assign(this, gitter);
+        })
         .then(() => this.buildDeploymentNotification('Deployment started', 'warning'))
         .then(notification => this.sendNotification(notification, this.serverless.cli.consoleLog)),
 
       // after service deployment
       'after:deploy:deploy': () => Promise.bind(this)
         .then(() => Object.assign(this, this.getDeploymentInfo()))
+        .then(async () => {
+          const gitter = await gitInfo(__dirname)
+          console.log(gitter);
+          await Object.assign(this, gitter);
+        })
         .then(() => this.buildDeploymentNotification('Deployment succeeded', 'good'))
         .then(notification => this.sendNotification(notification, this.serverless.cli.consoleLog)),
     };
@@ -55,12 +66,14 @@ class ServerlessPluginNotification {
       invocationId: this.invocationId,
       message,
       providerName: this.provider.name,
+      serviceName: this.service.getServiceName(),
       stage: this.options.stage || this.provider.stage,
       region: this.options.region || this.provider.region,
       runtime: this.provider.runtime,
       functions: this.functions,
       endpoints: this.endpoints,
       severity,
+      git: this.git,
     };
   }
 

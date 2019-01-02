@@ -17,8 +17,9 @@
   },
   "homepage": "https://github.com/maasglobal/serverless-plugin-notification#readme",
   "dependencies": {
+    "bluebird": "^3.5.0",
     "request-promise-lite": "0.9",
-    "bluebird": "^3.5.0"
+    "simple-git": "^1.107.0"
   },
   "devDependencies": {
     "babel-eslint": "^7.2.3",
