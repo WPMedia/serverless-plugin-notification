@@ -29,71 +29,100 @@ class Slack {
     }
 
     return {
-      attachments: [
-        {
-          color: color,
-          title: `\`${notification.serviceName}\`: ${
+      text: `\`${notification.serviceName}\`${this.uncommittedFiles(notification)}\n
+      Invocation ID: *${notification.invocationId}*\nStage: *${
+      notification.stage
+    }*, Region: *${notification.region}*, Deployer: *${
+      notification.deployer
+    }*
+    `,
+      attachments: [{
+        color: color,
+        title: `${
             notification.message
           } ${icon} ${icon} ${icon}`,
-          text: `Invocation ID: *${notification.invocationId}*\nStage: *${
-            notification.stage
-          }*, Region: *${notification.region}*, Deployer: *${
-            notification.deployer
-          }*
-          `,
-          author_name: `*${notification.git.commit}*, ${
-            notification.git.message
-          }`,
-          author_link: `${notification.git.url}`,
-          mrkdwn: true,
-          fields: [
-            {
-              title: 'Provider',
-              value: `${notification.providerName}`,
-              short: 'true',
-            },
-            {
-              title: 'Lambda runtime',
-              value: `${notification.runtime}`,
-              short: 'true',
-            },
-            {
-              title: 'Number of lambdas',
-              value: `${notification.functions.length}`,
-              short: 'true',
-            },
-            {
-              title: 'Number of endpoints',
-              value: `${notification.endpoints.length}`,
-              short: 'true',
-            },
-          ],
+
+        author_name: `${notification.git.commit} on ${notification.git.branch}`,
+        author_link: `${notification.git.url}`,
+        mrkdwn: true,
+        fields: [{
+          title: 'Provider',
+          value: `${notification.providerName}`,
+          short: 'true',
         },
-      ],
+        {
+          title: 'Lambda runtime',
+          value: `${notification.runtime}`,
+          short: 'true',
+        },
+        {
+          title: 'Number of lambdas',
+          value: `${notification.functions.length}`,
+          short: 'true',
+        },
+        {
+          title: 'Number of endpoints',
+          value: `${notification.endpoints.length}`,
+          short: 'true',
+        },
+        ],
+      }],
     };
   }
+
+  uncommittedFiles(notification) {
+    return notification.git.modified_files.length > 0 || notification.git.added_files.length > 0 ? `\n> *Uncommitted files during deploy*` : '';
+  }
+
+  buildGitInfoReply(notification) {
+    const reply = [{
+      title: notification.git.commit,
+      color: '#E67E22',
+      text: `${notification.git.message}, by ${notification.git.author} on branch ${notification.git.branch} @ ${notification.git.date}`,
+    } ]
+
+    if (notification.git.modified_files.length > 0) {
+      reply.push(
+        {
+          title: `Modified since commit`,
+          color: '#A93226',
+          text: notification.git.modified_files.join('\n'),
+        }
+      )
+    }
+    if (notification.git.added_files.length > 0 ) {
+      reply.push(
+        {
+          title: `Added since commit`,
+          color: '#1F618D',
+          text: notification.git.added_files.join('\n'),
+        }
+      )
+    }
+    return reply;
+  }
+
 
   buildReply(notification) {
     const formatEndpoint = endpointObj =>
       `${endpointObj.method}~${endpointObj.path}`;
-    return {
-      functions: [
-        {
-          title: 'Function listing',
-          color: '#49311c',
-          text: `\n${notification.functions.join('\n')}`,
-          mrkdwn: true,
-        },
-      ],
-      endpoints: [
-        {
-          title: 'Endpoint listing',
-          color: '#49311c',
-          text: `\n${notification.endpoints.map(formatEndpoint).join('\n')}`,
-          mrkdwn: true,
-        },
-      ],
+    const reply = {
+      commit: this.buildGitInfoReply(notification),
+      functions: [{
+        title: 'Function listing',
+        color: '#49311c',
+        text: `\n${notification.functions.join('\n')}`,
+      }],
     };
+    if (notification.endpoints.length > 0) {
+      reply.endpoints = [{
+        title: 'Endpoint listing',
+        color: '#49311c',
+        text: `\n${notification.endpoints.map(formatEndpoint).join('\n')}`,
+      }];
+    }
+
+    return reply;
   }
 
   notify(notification, logger) {
@@ -115,6 +144,7 @@ class Slack {
       },
       json: true,
       form: {
+        text: message.text,
         token: this.token,
         channel: this.channel,
         attachments: JSON.stringify(message.attachments),

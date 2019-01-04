@@ -24,7 +24,7 @@ class ServerlessPluginNotification {
       'before:deploy:deploy': () => Promise.bind(this)
         .then(() => Object.assign(this, this.getDeploymentInfo()))
         .then(async () => {
-          const gitter = await gitInfo(__dirname)
+          const gitter = await gitInfo(this.serverless.config.servicePath)
           console.log(gitter);
           await Object.assign(this, gitter);
         })
@@ -35,7 +35,7 @@ class ServerlessPluginNotification {
       'after:deploy:deploy': () => Promise.bind(this)
         .then(() => Object.assign(this, this.getDeploymentInfo()))
         .then(async () => {
-          const gitter = await gitInfo(__dirname)
+          const gitter = await gitInfo(this.serverless.config.servicePath)
           console.log(gitter);
           await Object.assign(this, gitter);
         })
